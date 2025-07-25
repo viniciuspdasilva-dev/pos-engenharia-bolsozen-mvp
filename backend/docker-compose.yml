@@ -1,0 +1,22 @@
+services:
+  db-user:
+    image: postgres:15
+    container_name: bolsozen-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bolsozen_user
+      POSTGRES_PASSWORD: supersecret
+      POSTGRES_DB: bolsozen_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - bolsozen-network
+
+volumes:
+  pgdata:
+
+networks:
+  bolsozen-network:
+    driver: bridge
