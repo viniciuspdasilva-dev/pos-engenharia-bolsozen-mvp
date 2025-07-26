@@ -14,4 +14,11 @@ class Address(Base):
         server_default=text("gen_random_uuid()")
     )
     email: Mapped[str] = Column(String(50), unique=True)
-    password: Mapped[str] = Column(String(50), nullable=False)
+    hash_password: Mapped[str] = Column(String(50), nullable=False)
+
+    def __repr__(self):
+        return f"<Address(email={self.email})>"
+    def __eq__(self, other) -> bool:
+        return self.email == other.email
+    def __hash__(self) -> int:
+        return hash(self.email)

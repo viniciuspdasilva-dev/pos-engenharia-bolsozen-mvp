@@ -14,7 +14,7 @@ class Database:
     _engine = create_engine(os.getenv("DATABASE_URL"))
     _SessionLocal = sessionmaker(bind=_engine)
     def __init__(self):
-        self.db = self._SessionLocal()
+        self.db: Session = self._SessionLocal()
 
     def __enter__(self):
         return self.db
