@@ -1,4 +1,4 @@
-from backend.app.config.HashPassword import HashPassword
+from backend.app.config.hash_password import HashPassword
 
 
 class CreateUserDTO:

@@ -1,31 +1,29 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session, declarative_base
-from dotenv import load_dotenv
-
 import os
+
+from dotenv import load_dotenv
+from sqlalchemy import exc
+from sqlalchemy.ext.asyncio import (
+    create_async_engine,
+    async_sessionmaker
+)
+from sqlalchemy.orm import Session, declarative_base
 
 load_dotenv()
 
 Base = declarative_base()
 
+
 # Classe usada para habilitar a conexão com a base de dados
 # e permitir o DI do FastAPI
 class Database:
-    _engine = create_engine(os.getenv("DATABASE_URL"))
-    _SessionLocal = sessionmaker(bind=_engine)
-    def __init__(self):
-        self.db: Session = self._SessionLocal()
+    _engine = create_async_engine(os.getenv("DATABASE_URL"))
+    _SessionLocal = async_sessionmaker(bind=_engine)
 
-    def __enter__(self):
-        return self.db
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.db.close()
-
-    @classmethod
-    def get_db(cls):
-        db = cls()._SessionLocal()
-        try:
-            yield db
-        finally:
-            db.close()
+    async def get_db(self) -> Session:
+        async with self._SessionLocal() as session:
+            try:
+                yield session
+                await session.commit()
+            except exc.SQLAlchemyError as e:
+                await session.rollback()
+                raise e
