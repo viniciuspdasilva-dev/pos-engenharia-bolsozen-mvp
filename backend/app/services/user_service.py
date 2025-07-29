@@ -1,55 +1,82 @@
+import logging
 import uuid
+from typing import List
 
-from fastapi.params import Depends
-from sqlalchemy.orm import Session
-from sqlalchemy.sql.annotation import Annotated
+from fastapi import Depends, HTTPException
+from sqlalchemy.ext.asyncio import async_session
 
-from backend.app.config.base_repository import BaseRepository
 from backend.app.dto.create_user_dto import CreateUserDTO
-from backend.app.model.address import Address
-from backend.app.model.user import User
-
-
-def _create_address(user_dto: CreateUserDTO) -> Address:
-    address: Address = Address()
-    address.hash_password = user_dto.get_password()
-    address.email = user_dto.get_email()
-    return address
+from backend.app.repositories.user.user_repository import UserRepository
+from backend.app.schemas.user_schema import UserCreateSchema, UserReadSchema
+from backend.app.utils.password_utils import HashPassword
 
 
 class UserService:
+    def __init__(self, repository: UserRepository) -> None:
+        self.repository = repository
 
-    def __init__(self, db: Session):
-        self.db = db
+    async def find_all(self) -> List[UserReadSchema]:
+        users = await self.repository.get_all()
+        if len(users) == 0:
+            return []
+        return [
+            UserReadSchema.model_validate(u) for u in users
+        ]
 
-    def get_all(self):
-        return self.db.query(User).all()
+    async def find_by_id(self, id_user: uuid.UUID) -> UserReadSchema:
+        user = await self.repository.get_user_by_id(id_user)
+        if user is None:
+            raise HTTPException(status_code=404, detail="User not found")
+        return UserReadSchema.model_validate(user)
 
-    def get_by_id(
-            self,
-            id_user: uuid.UUID,
-            repository: BaseRepository[User]
-    ):
-        return repository.get(id_user)
+    async def find_by_cpf(self, cpf: str) -> UserReadSchema:
+        user = await self.repository.get_user_by_cpf(cpf)
+        if user is None:
+            raise HTTPException(status_code=404, detail="User not found")
+        return UserReadSchema.model_validate(user)
 
-    def create(
-            self,
-            user_dto: CreateUserDTO,
-            repository: BaseRepository[User]
-    ) -> User:
-        user: User = User()
-        user.address = [_create_address(user_dto)]
-        user.name = user_dto.get_name()
-        user.cpf = user_dto.get_cpf()
-        repository.create(user)
-        return user
+    async def find_by_email(self, email: str) -> UserReadSchema:
+        user = await self.repository.get_user_by_email(email)
+        if user is None:
+            raise HTTPException(status_code=404, detail="User not found")
+        return UserReadSchema.model_validate(user)
 
-    def update(self, id_user: str, user_dto: CreateUserDTO):
-        user: User | None = self.db.query(User).filter(User.id == id_user).first()
+    async def create_user(self, user: UserCreateSchema) -> None:
+        user_dto: CreateUserDTO = CreateUserDTO(
+            name=user.name,
+            cpf=user.cpf,
+            email=user.email,
+            password=user.password
+        )
+        logging.info(f"Usuario a ser criado: {user_dto}")
+        await self.repository.create(user_dto)
+
+
+    async def update_user(self, id_user: uuid.UUID, user_update: UserCreateSchema) -> UserReadSchema:
+        user = await self.repository.get_user_by_id(id_user)
         if not user:
-            raise Exception("User not found : " + id_user)
-        user.name = user_dto.get_name()
-        user.cpf = user_dto.get_cpf()
-        user.address = [_create_address(user_dto)]
-        return user
+            raise HTTPException(status_code=404, detail="User not found")
+        user.name = user.name or user_update.name
+        if user_update.password:
+            user.hashed_password = (
+                HashPassword.hash(user_update.password)
+            )
+        user_new = await self.repository.update(user)
+        return UserReadSchema.model_validate(user_new)
 
+    async def delete_user(self, id_user: uuid.UUID) -> None:
+        user = await self.repository.get_user_by_id(id_user)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        await self.repository.delete(id_user)
+
+    def verify_password(self, plain_password: str, hashed_password: str) -> bool:
+        return HashPassword.verify(plain_password, hashed_password)
+
+
+# Injeção de dependencias
+async def get_user_service(
+        db: Depends(async_session)
+) -> UserService:
+    repository = UserRepository(db)
+    return UserService(repository)

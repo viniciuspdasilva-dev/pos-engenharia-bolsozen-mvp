@@ -1,6 +1,6 @@
-class UserNotFound(Exception):
-    def  __init__(self, message, id_user):
-        pass
+import uuid
 
-    def throws(self):
-        raise self
+
+class UserNotFound(Exception):
+    def  __init__(self, identifier: str | uuid.UUID | None = None):
+        super().__init__(f"User {identifier} not found")
