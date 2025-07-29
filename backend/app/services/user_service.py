@@ -3,8 +3,9 @@ import uuid
 from typing import List
 
 from fastapi import Depends, HTTPException
-from sqlalchemy.ext.asyncio import async_session
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.app.dependency import get_db
 from backend.app.dto.create_user_dto import CreateUserDTO
 from backend.app.repositories.user.user_repository import UserRepository
 from backend.app.schemas.user_schema import UserCreateSchema, UserReadSchema
@@ -12,8 +13,8 @@ from backend.app.utils.password_utils import HashPassword
 
 
 class UserService:
-    def __init__(self, repository: UserRepository) -> None:
-        self.repository = repository
+    def __init__(self, db: AsyncSession = Depends(get_db)) -> None:
+        self.repository = UserRepository(db)
 
     async def find_all(self) -> List[UserReadSchema]:
         users = await self.repository.get_all()
@@ -72,11 +73,3 @@ class UserService:
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         return HashPassword.verify(plain_password, hashed_password)
-
-
-# Injeção de dependencias
-async def get_user_service(
-        db: Depends(async_session)
-) -> UserService:
-    repository = UserRepository(db)
-    return UserService(repository)

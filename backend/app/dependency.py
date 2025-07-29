@@ -1,14 +1,8 @@
-from typing import Callable
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.app.config.base_repository import BaseRepository
-from backend.app.model import Base
+from backend.app.database import async_session
 
 
-def get_repository(
-        model: type[Base],
-) -> Callable[[AsyncSession], BaseRepository[model]]:
-    def func(session: AsyncSession) -> BaseRepository[model]:
-        return BaseRepository(model, session)
-    return func
+async def get_db() -> AsyncSession:
+    async with async_session() as session:
+        yield session

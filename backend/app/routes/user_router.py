@@ -6,25 +6,25 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from backend.app.config.security_config import get_current_user
 from backend.app.schemas.user_schema import UserCreateSchema, UserReadSchema, MensagemResponse
-from backend.app.services.user_service import UserService, get_user_service
+from backend.app.services.user_service import UserService
 
 router = APIRouter()
 
 
-@router.post("/create", response_model=None)
+@router.post("/create", response_model=MensagemResponse)
 async def register(
-        user: UserCreateSchema
-) -> Union[MensagemResponse, dict, None]:
-    service: UserService = Depends(get_user_service)
+        user: UserCreateSchema,
+        service: UserService = Depends()
+) -> MensagemResponse:
     if await service.find_by_id(user.id):
         raise HTTPException(status_code=400, detail="User already exists")
     try:
         await service.create_user(user)
         return MensagemResponse(
-                message="Usuario criado com sucesso.",
-                success=True,
-                status_code=201
-            )
+            message="Usuario criado com sucesso.",
+            success=True,
+            status_code=201
+        )
     except Exception as e:
         logging.error(e)
         return MensagemResponse(
@@ -34,20 +34,20 @@ async def register(
         )
 
 
-@router.get("/read", response_model=None)
+@router.get("/read", response_model=List[UserReadSchema])
 async def find_all(
+        service: UserService = Depends(),
         _: str = Depends(get_current_user)
-) -> Union[List[UserReadSchema], dict, None]:
-    service: UserService = Depends(get_user_service),
+) -> List[UserReadSchema]:
     return await service.find_all()
 
 
-@router.get("/read/{id}", response_model=None)
+@router.get("/read/{id}", response_model=UserReadSchema)
 async def read(
         id: uuid.UUID,
+        service: UserService = Depends(),
         _: str = Depends(get_current_user)
-) -> Union[UserReadSchema, dict, None]:
-    service: UserService = Depends(get_user_service),
+) -> UserReadSchema:
     user = await service.find_by_id(id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
