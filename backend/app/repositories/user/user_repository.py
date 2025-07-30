@@ -47,6 +47,7 @@ class UserRepository:
 
     async def create(self, user: CreateUserDTO) -> User:
         user = create_user(user)
+        user.pk = uuid.uuid4()
         self.db.add(user)
         await self.db.commit()
         await self.db.refresh(user)

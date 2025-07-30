@@ -8,10 +8,10 @@ from backend.app.model.entity_base import EntityModel
 
 class User(Base, EntityModel):
     __tablename__ = "users"
-    name: Mapped[str] = mapped_column(String(50), index=True)
+    name: Mapped[str] = mapped_column(String(255), index=True)
     cpf: Mapped[str] = mapped_column(String(11), unique=True, nullable=True)
-    email: Mapped[str] = mapped_column(String(50), index=True, unique=True)
-    hash_password: Mapped[str] = mapped_column(String(50), nullable=False)
+    email: Mapped[str] = mapped_column(String(100), index=True, unique=True)
+    hash_password: Mapped[str] = mapped_column(String(150), nullable=False)
     is_active: Mapped[bool] = mapped_column(types.Boolean, default=True)
     is_superuser: Mapped[bool] = mapped_column(types.Boolean, default=False)
     roles: Mapped[list["Roles"]] = relationship(

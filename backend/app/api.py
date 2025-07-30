@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 
 from backend.app.database import engine, Base
-from backend.app.routes import user_router
+from backend.app.routes import user_router, login_router
 
 load_dotenv()
 app = FastAPI()
@@ -13,3 +13,4 @@ async def startup():
         await conn.run_sync(Base.metadata.create_all)
 
 app.include_router(user_router.router, prefix="/users", tags=["user"])
+app.include_router(login_router.router, prefix="/oauth", tags=["oauth"])

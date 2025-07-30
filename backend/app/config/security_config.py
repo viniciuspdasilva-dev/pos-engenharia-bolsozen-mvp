@@ -10,6 +10,9 @@ from backend.app.model.roles import Roles
 
 from fastapi.security import OAuth2PasswordBearer
 
+from backend.app.schemas.user_schema import UserLoginSchema
+from backend.app.services.user_service import UserService
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/oauth/token")
 
 SECRET_KEY = os.getenv('SECRET_KEY')
@@ -22,10 +25,28 @@ credentials_exception = HTTPException(
     headers={"WWW-Authenticate": "Bearer"},
 )
 
+async def authenticate_user(username: str, password: str, user_service: UserService):
+    db_user: UserLoginSchema = await user_service.find_by_username(username)
+    if not db_user or not user_service.verify_password(password, db_user.hash_password):
+        raise credentials_exception
+    return db_user
 
-def create_access_token(data: dict, roles: list[Roles], expires_delta: timedelta = None) -> str:
+
+def create_access_token(data: dict, roles=None, expires_delta: timedelta = None) -> str:
+    if roles is None:
+        roles = []
     to_encode = data.copy()
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    to_encode.update({"exp": expire})
+    to_encode.update({"iat": datetime.utcnow()})
+    to_encode.update({"roles": roles})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def create_refresh_token(data: dict, roles=None, expires_delta: timedelta = None) -> str:
+    if roles is None:
+        roles = []
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(days=1)
     to_encode.update({"exp": expire})
     to_encode.update({"iat": datetime.utcnow()})
     to_encode.update({"roles": roles})
@@ -43,3 +64,6 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     if not payload:
         raise credentials_exception
     return payload
+
+def decode_token(token: str) -> dict:
+    return jwt.decode(token, SECRET_KEY, algorithms=ALGORITHM)

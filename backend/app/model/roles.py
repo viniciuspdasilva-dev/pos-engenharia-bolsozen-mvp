@@ -11,6 +11,6 @@ class Roles(Base, EntityModel):
     __tablename__ = 'roles'
     name: Mapped[str] = Column(Text, nullable=False)
     is_actived: Mapped[bool] = Column(Boolean, nullable=False)
-    users: Mapped[list['User']] = relationship(
-        secondary=user_roles, backref='roles', lazy='dynamic'
+    users: Mapped[list["User"]] = relationship(
+        secondary=user_roles, back_populates="roles"
     )

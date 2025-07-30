@@ -10,10 +10,19 @@ class UserCreateSchema(BaseModel):
     password: str
 
 class UserReadSchema(BaseModel):
-    id: uuid.UUID
+    id: uuid.UUID | str
     name: str
     cpf: str
     email: str
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+class UserLoginSchema(BaseModel):
+    id: uuid.UUID | str
+    cpf: str
+    email: str
+    hash_password: str
     class Config:
         orm_mode = True
         from_attributes = True
